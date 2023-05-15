@@ -3,6 +3,13 @@ typedef struct Trainer Trainer;
 typedef struct Pokemon Pokemon;
 typedef struct Invent Invent;
 
+typedef struct Blocka Blocka;
+typedef struct Blockg Blockg;
+typedef struct Blockm Blockm;
+typedef struct Blocke Blocke;
+typedef struct Pokedat Pokedat;
+
+
 struct Section {
 	uchar data[4084];
 	u16int id;
@@ -28,6 +35,53 @@ struct Trainer {
 	u32int gamecode;
 };
 
+struct Blockg {
+	u16int species;
+	u16int item;
+	u32int exp;
+	uchar ppbonus;
+	uchar friendship;
+	u16int magic;
+};
+
+struct Blocka {
+	u16int move1;
+	u16int move2;
+	u16int move3;
+	u16int move4;
+	uchar pp[4];
+};
+
+struct Blockm {
+	uchar pokerus;
+	uchar met;
+	u16int origins;
+	u32int iv;
+	u32int ribbions;
+};
+
+struct Blocke {
+	uchar hp;
+	uchar atk;
+	uchar def;
+	uchar spd;
+	uchar spatk;
+	uchar spdef;
+	uchar cool;
+	uchar beauty;
+	uchar cute;
+	uchar smart;
+	uchar tough;
+	uchar feel;
+};
+
+struct Pokedat {
+	Blockg g;
+	Blocka a;
+	Blockm m;
+	Blocke e;
+};
+
 struct Pokemon {
 	u32int personality;
 	u32int otid;
@@ -43,5 +97,7 @@ struct Pokemon {
 
 struct Invent {
 	u32int teamsz;
-	Pokemon p1;
+	Pokemon team[6];
+	u32int money;
+	u16int coins;
 };
