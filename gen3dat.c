@@ -130,6 +130,216 @@ puttrainer(uchar *dst, Trainer *src)
 }
 
 long
+getblockg(Blockg *ret, uchar *data)
+{
+	long n;
+
+	n = 0;
+	ret->species = GET2(data+n);
+	n += 2;
+	ret->item = GET2(data+n);
+	n += 2;
+	ret->exp = GET4(data+n);
+	n += 4;
+	ret->ppbonus = data[n];
+	n += 1;
+	ret->friendship = data[n];
+	n += 1;
+	ret->magic = GET2(data+n);
+	n += 2;
+	return n;
+}
+
+long
+putblockg(uchar *dst, Blockg *src)
+{
+	long n;
+
+	n = 0;
+	PUT2(dst+n, src->species);
+	n += 2;
+	PUT2(dst+n, src->item);
+	n += 2;
+	PUT4(dst+n, src->exp);
+	n += 4;
+	dst[n] = src->ppbonus;
+	n += 1;
+	dst[n] = src->friendship;
+	n += 1;
+	PUT2(dst+n, src->magic);
+	n += 2;
+	return n;
+}
+
+long
+getblocka(Blocka *ret, uchar *data)
+{
+	long n;
+
+	n = 0;
+	ret->move1 = GET2(data+n);
+	n += 2;
+	ret->move2 = GET2(data+n);
+	n += 2;
+	ret->move3 = GET2(data+n);
+	n += 2;
+	ret->move4 = GET2(data+n);
+	n += 2;
+	memcpy(ret->pp, data+n, 4);
+	n += 4;
+	return n;
+}
+
+long
+putblocka(uchar *dst, Blocka *src)
+{
+	long n;
+
+	n = 0;
+	PUT2(dst+n, src->move1);
+	n += 2;
+	PUT2(dst+n, src->move2);
+	n += 2;
+	PUT2(dst+n, src->move3);
+	n += 2;
+	PUT2(dst+n, src->move4);
+	n += 2;
+	memcpy(dst+n, src->pp, 4);
+	n += 4;
+	return n;
+}
+
+long
+getblockm(Blockm *ret, uchar *data)
+{
+	long n;
+
+	n = 0;
+	ret->pokerus = data[n];
+	n += 1;
+	ret->met = data[n];
+	n += 1;
+	ret->origins = GET2(data+n);
+	n += 2;
+	ret->iv = GET4(data+n);
+	n += 4;
+	ret->ribbions = GET4(data+n);
+	n += 4;
+	return n;
+}
+
+long
+putblockm(uchar *dst, Blockm *src)
+{
+	long n;
+
+	n = 0;
+	dst[n] = src->pokerus;
+	n += 1;
+	dst[n] = src->met;
+	n += 1;
+	PUT2(dst+n, src->origins);
+	n += 2;
+	PUT4(dst+n, src->iv);
+	n += 4;
+	PUT4(dst+n, src->ribbions);
+	n += 4;
+	return n;
+}
+
+long
+getblocke(Blocke *ret, uchar *data)
+{
+	long n;
+
+	n = 0;
+	ret->hp = data[n];
+	n += 1;
+	ret->atk = data[n];
+	n += 1;
+	ret->def = data[n];
+	n += 1;
+	ret->spd = data[n];
+	n += 1;
+	ret->spatk = data[n];
+	n += 1;
+	ret->spdef = data[n];
+	n += 1;
+	ret->cool = data[n];
+	n += 1;
+	ret->beauty = data[n];
+	n += 1;
+	ret->cute = data[n];
+	n += 1;
+	ret->smart = data[n];
+	n += 1;
+	ret->tough = data[n];
+	n += 1;
+	ret->feel = data[n];
+	n += 1;
+	return n;
+}
+
+long
+putblocke(uchar *dst, Blocke *src)
+{
+	long n;
+
+	n = 0;
+	dst[n] = src->hp;
+	n += 1;
+	dst[n] = src->atk;
+	n += 1;
+	dst[n] = src->def;
+	n += 1;
+	dst[n] = src->spd;
+	n += 1;
+	dst[n] = src->spatk;
+	n += 1;
+	dst[n] = src->spdef;
+	n += 1;
+	dst[n] = src->cool;
+	n += 1;
+	dst[n] = src->beauty;
+	n += 1;
+	dst[n] = src->cute;
+	n += 1;
+	dst[n] = src->smart;
+	n += 1;
+	dst[n] = src->tough;
+	n += 1;
+	dst[n] = src->feel;
+	n += 1;
+	return n;
+}
+
+long
+getpokedat(Pokedat *ret, uchar *data)
+{
+	long n;
+
+	n = 0;
+	n += getblockg(&ret->g, data+n);
+	n += getblocka(&ret->a, data+n);
+	n += getblockm(&ret->m, data+n);
+	n += getblocke(&ret->e, data+n);
+	return n;
+}
+
+long
+putpokedat(uchar *dst, Pokedat *src)
+{
+	long n;
+
+	n = 0;
+	n += putblockg(dst+n, &src->g);
+	n += putblocka(dst+n, &src->a);
+	n += putblockm(dst+n, &src->m);
+	n += putblocke(dst+n, &src->e);
+	return n;
+}
+
+long
 getpokemon(Pokemon *ret, uchar *data)
 {
 	long n;
@@ -195,7 +405,16 @@ getinvent(Invent *ret, uchar *data)
 	n = 0;
 	ret->teamsz = GET4(data+n);
 	n += 4;
-	n += getpokemon(&ret->p1, data+n);
+	n += getpokemon(&ret->team[0], data+n);
+	n += getpokemon(&ret->team[1], data+n);
+	n += getpokemon(&ret->team[2], data+n);
+	n += getpokemon(&ret->team[3], data+n);
+	n += getpokemon(&ret->team[4], data+n);
+	n += getpokemon(&ret->team[5], data+n);
+	ret->money = GET4(data+n);
+	n += 4;
+	ret->coins = GET2(data+n);
+	n += 2;
 	return n;
 }
 
@@ -207,7 +426,16 @@ putinvent(uchar *dst, Invent *src)
 	n = 0;
 	PUT4(dst+n, src->teamsz);
 	n += 4;
-	n += putpokemon(dst+n, &src->p1);
+	n += putpokemon(dst+n, &src->team[0]);
+	n += putpokemon(dst+n, &src->team[1]);
+	n += putpokemon(dst+n, &src->team[2]);
+	n += putpokemon(dst+n, &src->team[3]);
+	n += putpokemon(dst+n, &src->team[4]);
+	n += putpokemon(dst+n, &src->team[5]);
+	PUT4(dst+n, src->money);
+	n += 4;
+	PUT2(dst+n, src->coins);
+	n += 2;
 	return n;
 }
 
