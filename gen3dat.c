@@ -1,6 +1,6 @@
 #include <u.h>
 #include <libc.h>
-#include "gen3.h"
+#include "gen3dat.h"
 
 #define GET2(p) (u16int)(p)[0] | (u16int)(p)[1]<<8
 #define PUT2(p, u) (p)[1] = (u)>>8, (p)[0] = (u)
