@@ -2,6 +2,7 @@ typedef struct Section Section;
 typedef struct Trainer Trainer;
 typedef struct Pokemon Pokemon;
 typedef struct Invent Invent;
+typedef struct InventPokemon InventPokemon;
 
 typedef struct Blocka Blocka;
 typedef struct Blockg Blockg;
@@ -9,6 +10,8 @@ typedef struct Blockm Blockm;
 typedef struct Blocke Blocke;
 typedef struct Pokedat Pokedat;
 
+typedef struct Boxname Boxname;
+typedef struct PC PC;
 
 struct Section {
 	uchar data[4084];
@@ -92,12 +95,27 @@ struct Pokemon {
 	u16int chk;
 	u16int magic;
 	uchar data[48];
+};
+
+struct InventPokemon {
+	Pokemon p;
 	uchar derived[20];
 };
 
 struct Invent {
 	u32int teamsz;
-	Pokemon team[6];
+	InventPokemon team[6];
 	u32int money;
 	u16int coins;
+};
+
+struct Boxname {
+	uchar n[9];
+};
+
+struct PC {
+	u32int current;
+	Pokemon box[420];
+	Boxname name[14];
+	uchar wallpaper[14];
 };
