@@ -75,6 +75,27 @@ gen3pkstr(uchar *d, uchar *p, int n)
 }
 
 void
+getgen3iv(Gen3iv *dst, u32int src)
+{
+	dst->hp = (src & 0x1f);
+	src >>= 5;
+	dst->atk = (src & 0x1f);
+	src >>= 5;
+	dst->def = (src & 0x1f);
+	src >>= 5;
+	dst->spe = (src & 0x1f);
+	src >>= 5;
+	dst->spatk = (src & 0x1f);
+	src >>= 5;
+	dst->spdef = (src & 0x1f);
+	src >>= 5;
+
+	dst->egg = (src & 0x1);
+	src >>= 1;
+	dst->ability = (src & 0x1);
+}
+
+void
 getgen3(int fd, Gen3 *save)
 {
 	int i, j;
@@ -115,4 +136,13 @@ getgen3(int fd, Gen3 *save)
 	}
 
 	getpc(&save->pc, save->pcbuf);
+}
+
+extern int gen3speciestab[];
+
+int
+getgen3dex(u16int species)
+{
+
+	return gen3speciestab[species]-1;
 }

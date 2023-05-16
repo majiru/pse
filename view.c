@@ -28,7 +28,10 @@ Pokemon *currentpk = nil;
 Point spwd;
 Image *background, *light;
 
+Image *spritecache[1024];
+
 extern char *dexfiletab[];
+extern char *movenametab[];
 
 static void
 chbox(int x)
@@ -48,6 +51,7 @@ redraw(void)
 	Image *image;
 	Rectangle r, r2;
 	Pokedat pd;
+	Gen3iv iv;
 	int i;
 	int fd;
 
@@ -74,10 +78,8 @@ redraw(void)
 		if(gen3.pc.box[currentbox*30 + i].otid == 0)
 			continue;
 		decryptpokemon(&pd, gen3.pc.box + currentbox*30 + i);
-		if(pd.g.species > 251)
-			pd.g.species -= 0x19;
 		//fprint(2, "%d %s\n", pd.g.species, dexfiletab[pd.g.species]);
-		snprint(path, sizeof path, "/sys/games/lib/pokesprite/regular/%s.png", dexfiletab[pd.g.species-1]);
+		snprint(path, sizeof path, "/sys/games/lib/pokesprite/regular/%s.png", dexfiletab[getgen3dex(pd.g.species)]);
 		r2.min.x = r.min.x + (i%6) * spwd.x;
 		r2.min.y = r.min.y + (i/6) * spwd.y;
 		r2.max.x = r2.min.x + spwd.x;
@@ -86,18 +88,20 @@ redraw(void)
 		if(gen3.pc.box + currentbox*30 + i == currentpk)
 			draw(screen, r2, light, nil, ZP);
 
-		//fprint(2, "opening %s\n", path);
-		fd = open(path, OREAD);
-		if(fd < 0){
-			fprint(2, "could not open %s\n", path);
-			continue;
+		image = spritecache[pd.g.species-1];
+		if(image == nil){
+			fd = open(path, OREAD);
+			if(fd < 0){
+				fprint(2, "could not open %s\n", path);
+				continue;
+			}
+			image = readimage(display, fd, 0);
+			close(fd);
+			if(image == nil)
+				continue;
 		}
-		image = readimage(display, fd, 0);
-		close(fd);
-		if(image == nil)
-			continue;
 		draw(screen, r2, image, nil, ZP);
-		freeimage(image);
+		spritecache[pd.g.species-1] = image;
 	}
 
 	decryptpokemon(&pd, currentpk);
@@ -110,11 +114,20 @@ redraw(void)
 	snprint(path, sizeof path, "Exp: %d", pd.g.exp);
 	string(screen, r.min, display->black, ZP, display->defaultfont, path);
 	r.min.y += display->defaultfont->height;
-	snprint(path, sizeof path, "Move 1: %d  Move 2: %d  Move 3: %d  Move 4: %d", pd.a.move1, pd.a.move2, pd.a.move3, pd.a.move4);
+	snprint(path, sizeof path, "Move 1: %s  Move 2: %s", movenametab[pd.a.move1], movenametab[pd.a.move2]);
 	string(screen, r.min, display->black, ZP, display->defaultfont, path);
 	r.min.y += display->defaultfont->height;
 
-	snprint(path, sizeof path, "HP: %d  Atk: %d  Def: %d  SpA: %d  SpD: %d  Spe: %d", pd.e.hp, pd.e.atk, pd.e.def, pd.e.spatk, pd.e.spdef, pd.e.spd);
+	snprint(path, sizeof path, "Move 3: %s  Move 4: %s", movenametab[pd.a.move3], movenametab[pd.a.move4]);
+	string(screen, r.min, display->black, ZP, display->defaultfont, path);
+	r.min.y += display->defaultfont->height;
+
+	snprint(path, sizeof path, "[EV] HP: %d  Atk: %d  Def: %d  SpA: %d  SpD: %d  Spe: %d", pd.e.hp, pd.e.atk, pd.e.def, pd.e.spatk, pd.e.spdef, pd.e.spd);
+	string(screen, r.min, display->black, ZP, display->defaultfont, path);
+	r.min.y += display->defaultfont->height;
+
+	getgen3iv(&iv, pd.m.iv);
+	snprint(path, sizeof path, "[IV] HP: %d  Atk: %d  Def: %d  SpA: %d  SpD: %d  Spe: %d", iv.hp, iv.atk, iv.def, iv.spatk, iv.spdef, iv.spe);
 	string(screen, r.min, display->black, ZP, display->defaultfont, path);
 	r.min.y += display->defaultfont->height;
 

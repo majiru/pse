@@ -40,6 +40,20 @@ struct Gen3{
 	uchar pcbuf[3968*8 + 2000];
 };
 
+typedef struct Gen3iv Gen3iv;
+struct Gen3iv {
+	uchar hp;
+	uchar atk;
+	uchar def;
+	uchar spe;
+	uchar spatk;
+	uchar spdef;
+	uchar egg;
+	uchar ability;
+};
+
 void gen3pkstr(uchar *d, uchar *s, int n);
 void getgen3(int fd, Gen3 *save);
 void decryptpokemon(Pokedat *dst, Pokemon *src);
+void getgen3iv(Gen3iv *dst, u32int src);
+int getgen3dex(u16int species);
