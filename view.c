@@ -11,18 +11,6 @@
 
 Gen3 gen3;
 
-static void
-mklower(char *d, char *e, char *s)
-{
-	assert(d <= e-1);
-	for(; *s != 0 && d < e-1; s++){
-		if(!isascii(*s))
-			continue;
-		*d++ = tolower(*s);
-	}
-	*d = 0;
-}
-
 int currentbox = 0;
 Pokemon *currentpk = nil;
 Point spwd;
@@ -43,6 +31,19 @@ chbox(int x)
 		currentbox = 13;
 }
 
+static int
+screenprint(Point p, char *format, ...)
+{
+	char buf[256];
+	va_list v;
+
+	va_start(v, format);
+	vsnprint(buf, sizeof buf, format, v);
+	va_end(v);
+	string(screen, p, display->black, ZP, display->defaultfont, buf);
+	return display->defaultfont->height;
+}
+
 static void
 redraw(void)
 {
@@ -50,6 +51,7 @@ redraw(void)
 	char path[128];
 	Image *image;
 	Rectangle r, r2;
+	Point p;
 	Pokedat pd;
 	Gen3iv iv;
 	int i;
@@ -60,33 +62,25 @@ redraw(void)
 	r2 = r;
 	spwd = Pt(68*2, 56*2);
 
-	gen3pkstr((uchar*)buf, gen3.tr.name, sizeof gen3.tr.name);
-	snprint(path, sizeof path, "Name: %s  ID: %d  Secret ID: %d", buf, gen3.tr.id, gen3.tr.secretid);
-	string(screen, r.min, display->black, ZP, display->defaultfont, path);
-	r.min.y += display->defaultfont->height;
-	snprint(path, sizeof path, "Time Played: %dhr %dmin", gen3.tr.hours, gen3.tr.min);
-	string(screen, r.min, display->black, ZP, display->defaultfont, path);
-	r.min.y += display->defaultfont->height;
-	gen3pkstr((uchar*)buf, gen3.pc.name[currentbox].n, sizeof gen3.pc.name[currentbox].n);
-	snprint(path, sizeof path, "Box %d: %s", currentbox+1, buf);
-	string(screen, r.min, display->black, ZP, display->defaultfont, path);
-	r.min.y += display->defaultfont->height;
+	r.min.y += screenprint(r.min, "Name: %G  ID: %d  Secret ID: %d", gen3.tr.name, sizeof gen3.tr.name, gen3.tr.id, gen3.tr.secretid);
+	r.min.y += screenprint(r.min, "Game: %s  Time Played: %dhr %dmin", gen3gnametab[gen3.type], gen3.tr.hours, gen3.tr.min);
+	r.min.y += screenprint(r.min, "Box %d: %G", currentbox+1, gen3.pc.name[currentbox].n, sizeof gen3.pc.name[currentbox].n);
 
 	if(currentpk == nil)
 		currentpk = gen3.pc.box;
 	for(i = 0; i < 30; i++){
-		if(gen3.pc.box[currentbox*30 + i].otid == 0)
-			continue;
-		decryptpokemon(&pd, gen3.pc.box + currentbox*30 + i);
-		//fprint(2, "%d %s\n", pd.g.species, dexfiletab[pd.g.species]);
-		snprint(path, sizeof path, "/sys/games/lib/pokesprite/regular/%s.png", dexfiletab[getgen3dex(pd.g.species)]);
 		r2.min.x = r.min.x + (i%6) * spwd.x;
 		r2.min.y = r.min.y + (i/6) * spwd.y;
 		r2.max.x = r2.min.x + spwd.x;
 		r2.max.y = r2.min.y + spwd.y;
-
 		if(gen3.pc.box + currentbox*30 + i == currentpk)
 			draw(screen, r2, light, nil, ZP);
+		if(gen3.pc.box[currentbox*30 + i].otid == 0)
+			continue;
+		decryptpokemon(&pd, gen3.pc.box + currentbox*30 + i);
+		if(pd.g.species > 411 || getgen3dex(pd.g.species) == -1)
+			continue;
+		snprint(path, sizeof path, "/sys/games/lib/pokesprite/regular/%s.png", dexfiletab[getgen3dex(pd.g.species)]);
 
 		image = spritecache[pd.g.species-1];
 		if(image == nil){
@@ -108,29 +102,16 @@ redraw(void)
 	r = screen->r;
 	r.min.x += 6*spwd.x;
 
-	snprint(path, sizeof path, "Species: %d", pd.g.species);
-	string(screen, r.min, display->black, ZP, display->defaultfont, path);
-	r.min.y += display->defaultfont->height;
-	snprint(path, sizeof path, "Exp: %d", pd.g.exp);
-	string(screen, r.min, display->black, ZP, display->defaultfont, path);
-	r.min.y += display->defaultfont->height;
-	snprint(path, sizeof path, "Move 1: %s  Move 2: %s", movenametab[pd.a.move1], movenametab[pd.a.move2]);
-	string(screen, r.min, display->black, ZP, display->defaultfont, path);
-	r.min.y += display->defaultfont->height;
-
-	snprint(path, sizeof path, "Move 3: %s  Move 4: %s", movenametab[pd.a.move3], movenametab[pd.a.move4]);
-	string(screen, r.min, display->black, ZP, display->defaultfont, path);
-	r.min.y += display->defaultfont->height;
-
-	snprint(path, sizeof path, "[EV] HP: %d  Atk: %d  Def: %d  SpA: %d  SpD: %d  Spe: %d", pd.e.hp, pd.e.atk, pd.e.def, pd.e.spatk, pd.e.spdef, pd.e.spd);
-	string(screen, r.min, display->black, ZP, display->defaultfont, path);
-	r.min.y += display->defaultfont->height;
-
+	r.min.y += screenprint(r.min, "Name: %G", currentpk->name, sizeof currentpk->name);
+	r.min.y += screenprint(r.min, "OT Name: %G  OT ID: %ud  OT Secret ID: %d", currentpk->otname, sizeof currentpk->otname, currentpk->otid, currentpk->otsecretid);
+	r.min.y += screenprint(r.min, "National Dex: %d", getgen3dex(pd.g.species));
+	r.min.y += screenprint(r.min, "Shiny: %d", gen3shiny(currentpk));
+	r.min.y += screenprint(r.min, "Exp: %d", pd.g.exp);
+	r.min.y += screenprint(r.min, "Move 1: %s  Move 2: %s", movenametab[pd.a.move1], movenametab[pd.a.move2]);
+	r.min.y += screenprint(r.min, "Move 3: %s  Move 4: %s", movenametab[pd.a.move3], movenametab[pd.a.move4]);
+	r.min.y += screenprint(r.min, "[EV] HP: %d  Atk: %d  Def: %d  SpA: %d  SpD: %d  Spe: %d", pd.e.hp, pd.e.atk, pd.e.def, pd.e.spatk, pd.e.spdef, pd.e.spd);
 	getgen3iv(&iv, pd.m.iv);
-	snprint(path, sizeof path, "[IV] HP: %d  Atk: %d  Def: %d  SpA: %d  SpD: %d  Spe: %d", iv.hp, iv.atk, iv.def, iv.spatk, iv.spdef, iv.spe);
-	string(screen, r.min, display->black, ZP, display->defaultfont, path);
-	r.min.y += display->defaultfont->height;
-
+	r.min.y += screenprint(r.min, "[IV] HP: %d  Atk: %d  Def: %d  SpA: %d  SpD: %d  Spe: %d", iv.hp, iv.atk, iv.def, iv.spatk, iv.spdef, iv.spe);
 	flushimage(display, 1);
 }
 
@@ -205,6 +186,7 @@ threadmain(int argc, char **argv)
 	if(fd < 0)
 		sysfatal("open: %r");
 
+	fmtinstall('G', gen3strfmt);
 	getgen3(fd, &gen3);
 
 	if(initdraw(nil, nil, "pse") < 0)

@@ -3,6 +3,12 @@
 #include "gen3dat.h"
 #include "gen3.h"
 
+char *gen3gnametab[] = {
+	[GRS] "Ruby/Sapphire",
+	[GFRLG] "Fire Red/Leaf Green",
+	[GEM] "Emerald",
+};
+
 int poketab[24][4] = {
 	{0, 12, 36, 24},
 	{0, 12, 24, 36},
@@ -54,8 +60,17 @@ decryptpokemon(Pokedat *dst, Pokemon *src)
 	memcpy(buf + t[1], src->data + 12, 12);
 	memcpy(buf + t[2], src->data + 24, 12);
 	memcpy(buf + t[3], src->data + 36, 12);
-	cryptpokedat(buf, src->otid, src->personality);
+	cryptpokedat(buf, src->otid|(src->otsecretid<<16), src->personality);
 	assert(getpokedat(dst, buf) == sizeof buf);
+}
+
+int
+gen3shiny(Pokemon *p)
+{
+	u16int v;
+
+	v = p->otid ^ p->otsecretid ^ (u16int)(p->personality>>16) ^ (u16int)(p->personality);
+	return v < 8;
 }
 
 void
@@ -72,6 +87,19 @@ gen3pkstr(uchar *d, uchar *p, int n)
 			*d++ = 'a' + (*p - 0xD5);
 	}
 	*d = 0;
+}
+
+int
+gen3strfmt(Fmt *f)
+{
+	uchar *p;
+	long n;
+	uchar buf[32];
+
+	p = va_arg(f->args, uchar*);
+	n = va_arg(f->args, long);
+	gen3pkstr(buf, p, n);
+	return fmtprint(f, "%s", (char*)buf);
 }
 
 void
@@ -99,6 +127,7 @@ void
 getgen3(int fd, Gen3 *save)
 {
 	int i, j;
+	long off;
 	uchar buf[8192];
 
 	for(i = 0; i < 14; i++){
@@ -118,9 +147,30 @@ getgen3(int fd, Gen3 *save)
 		switch(save->active[i].id){
 		case STrainer:
 			gettrainer(&save->tr, save->active[i].data);
+			switch(save->tr.gamecode){
+			case 0:
+				save->type = GRS;
+				break;
+			case 1:
+				save->type = GFRLG;
+				break;
+			default:
+				save->type = GEM;
+				break;
+			}
 			break;
 		case SInvent:
-			getinvent(&save->inv, save->active[i].data + 0x34);
+			switch(save->type){
+			default:
+			case GEM:
+			case GRS:
+				off = 0x234;
+				break;
+			case GFRLG:
+				off = 0x34;
+				break;
+			}
+			getinvent(&save->inv, save->active[i].data + off);
 			break;
 		case SState: case SMisc: case SRiv:
 			break;

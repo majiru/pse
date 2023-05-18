@@ -21,6 +21,8 @@ enum{
 	GEM,
 };
 
+extern char* gen3gnametab[];
+
 long getsection(Section*,uchar*);
 long gettrainer(Trainer*,uchar*);
 long getinvent(Invent*,uchar*);
@@ -53,7 +55,9 @@ struct Gen3iv {
 };
 
 void gen3pkstr(uchar *d, uchar *s, int n);
+int gen3strfmt(Fmt*);
 void getgen3(int fd, Gen3 *save);
 void decryptpokemon(Pokedat *dst, Pokemon *src);
 void getgen3iv(Gen3iv *dst, u32int src);
 int getgen3dex(u16int species);
+int gen3shiny(Pokemon*);

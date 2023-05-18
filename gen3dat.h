@@ -87,7 +87,8 @@ struct Pokedat {
 
 struct Pokemon {
 	u32int personality;
-	u32int otid;
+	u16int otid;
+	u16int otsecretid;
 	uchar name[10];
 	u16int lang;
 	uchar otname[7];

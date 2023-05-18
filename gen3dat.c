@@ -347,8 +347,10 @@ getpokemon(Pokemon *ret, uchar *data)
 	n = 0;
 	ret->personality = GET4(data+n);
 	n += 4;
-	ret->otid = GET4(data+n);
-	n += 4;
+	ret->otid = GET2(data+n);
+	n += 2;
+	ret->otsecretid = GET2(data+n);
+	n += 2;
 	memcpy(ret->name, data+n, 10);
 	n += 10;
 	ret->lang = GET2(data+n);
@@ -374,8 +376,10 @@ putpokemon(uchar *dst, Pokemon *src)
 	n = 0;
 	PUT4(dst+n, src->personality);
 	n += 4;
-	PUT4(dst+n, src->otid);
-	n += 4;
+	PUT2(dst+n, src->otid);
+	n += 2;
+	PUT2(dst+n, src->otsecretid);
+	n += 2;
 	memcpy(dst+n, src->name, 10);
 	n += 10;
 	PUT2(dst+n, src->lang);
