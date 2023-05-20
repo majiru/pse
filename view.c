@@ -7,12 +7,13 @@
 #include <keyboard.h>
 #include <ctype.h>
 #include "gen3dat.h"
-#include "gen3.h"
+#include "colodat.h"
+#include "pse.h"
 
-Gen3 gen3;
+Save save;
 
 int currentbox = 0;
-Pokemon *currentpk = nil;
+void *currentpk = nil;
 Point spwd;
 Image *background, *light;
 
@@ -24,65 +25,74 @@ extern char *movenametab[];
 static void
 chbox(int x)
 {
+	int max;
+
+	switch(save.type){
+	default:
+	case GG3:
+		max = 13;
+		break;
+	case GCOLO:
+		max = 2;
+		break;
+	}
 	currentbox += x;
 	if(currentbox < 0)
+		currentbox = max;
+	else if(currentbox > max)
 		currentbox = 0;
-	else if(currentbox > 13)
-		currentbox = 13;
 }
 
 static int
-screenprint(Point p, char *format, ...)
+screenprint(Point p, char *s)
 {
-	char buf[256];
-	va_list v;
+	char *y, *dot;
+	Point op;
 
-	va_start(v, format);
-	vsnprint(buf, sizeof buf, format, v);
-	va_end(v);
-	string(screen, p, display->black, ZP, display->defaultfont, buf);
-	return display->defaultfont->height;
+	op = p;
+	for(y = s; (dot = strchr(y, '\n')) != nil; y = dot+1){
+		*dot = 0;
+		string(screen, p, display->black, ZP, display->defaultfont, y);
+		p.y += display->defaultfont->height;
+	}
+	return p.y - op.y;
 }
 
 static void
 redraw(void)
 {
-	char buf[32];
 	char path[128];
+	char buf[512];
 	Image *image;
 	Rectangle r, r2;
-	Point p;
-	Pokedat pd;
-	Gen3iv iv;
 	int i;
 	int fd;
+	int dex;
+	void *p;
 
 	draw(screen, screen->r, background, nil, ZP);
 	r = screen->r;
 	r2 = r;
 	spwd = Pt(68*2, 56*2);
-
-	r.min.y += screenprint(r.min, "Name: %G  ID: %d  Secret ID: %d", gen3.tr.name, sizeof gen3.tr.name, gen3.tr.id, gen3.tr.secretid);
-	r.min.y += screenprint(r.min, "Game: %s  Time Played: %dhr %dmin", gen3gnametab[gen3.type], gen3.tr.hours, gen3.tr.min);
-	r.min.y += screenprint(r.min, "Box %d: %G", currentbox+1, gen3.pc.name[currentbox].n, sizeof gen3.pc.name[currentbox].n);
+	save.view->hdr(buf, buf + sizeof buf, &save.gen3, currentbox);
+	r.min.y += screenprint(r.min, buf);
 
 	if(currentpk == nil)
-		currentpk = gen3.pc.box;
+		currentpk = save.view->box(0, 0, &save.gen3);
 	for(i = 0; i < 30; i++){
 		r2.min.x = r.min.x + (i%6) * spwd.x;
 		r2.min.y = r.min.y + (i/6) * spwd.y;
 		r2.max.x = r2.min.x + spwd.x;
 		r2.max.y = r2.min.y + spwd.y;
-		if(gen3.pc.box + currentbox*30 + i == currentpk)
+		p = save.view->box(currentbox, i, &save.gen3);
+		if(p == currentpk)
 			draw(screen, r2, light, nil, ZP);
-		if(gen3.pc.box[currentbox*30 + i].otid == 0)
+		dex = save.view->dex(p);
+		if(dex > 411 || dex == -1)
 			continue;
-		decryptpokemon(&pd, gen3.pc.box + currentbox*30 + i);
-		if(pd.g.species > 411 || getgen3dex(pd.g.species) == -1)
-			continue;
-		snprint(path, sizeof path, "/sys/games/lib/pokesprite/regular/%s.png", dexfiletab[getgen3dex(pd.g.species)]);
+		snprint(path, sizeof path, "/sys/games/lib/pokesprite/regular/%s.png", dexfiletab[dex]);
 
-		image = spritecache[pd.g.species-1];
+		image = spritecache[dex];
 		if(image == nil){
 			fd = open(path, OREAD);
 			if(fd < 0){
@@ -95,23 +105,13 @@ redraw(void)
 				continue;
 		}
 		draw(screen, r2, image, nil, ZP);
-		spritecache[pd.g.species-1] = image;
+		spritecache[dex] = image;
 	}
 
-	decryptpokemon(&pd, currentpk);
 	r = screen->r;
 	r.min.x += 6*spwd.x;
-
-	r.min.y += screenprint(r.min, "Name: %G", currentpk->name, sizeof currentpk->name);
-	r.min.y += screenprint(r.min, "OT Name: %G  OT ID: %ud  OT Secret ID: %d", currentpk->otname, sizeof currentpk->otname, currentpk->otid, currentpk->otsecretid);
-	r.min.y += screenprint(r.min, "National Dex: %d", getgen3dex(pd.g.species));
-	r.min.y += screenprint(r.min, "Shiny: %d", gen3shiny(currentpk));
-	r.min.y += screenprint(r.min, "Exp: %d", pd.g.exp);
-	r.min.y += screenprint(r.min, "Move 1: %s  Move 2: %s", movenametab[pd.a.move1], movenametab[pd.a.move2]);
-	r.min.y += screenprint(r.min, "Move 3: %s  Move 4: %s", movenametab[pd.a.move3], movenametab[pd.a.move4]);
-	r.min.y += screenprint(r.min, "[EV] HP: %d  Atk: %d  Def: %d  SpA: %d  SpD: %d  Spe: %d", pd.e.hp, pd.e.atk, pd.e.def, pd.e.spatk, pd.e.spdef, pd.e.spd);
-	getgen3iv(&iv, pd.m.iv);
-	r.min.y += screenprint(r.min, "[IV] HP: %d  Atk: %d  Def: %d  SpA: %d  SpD: %d  Spe: %d", iv.hp, iv.atk, iv.def, iv.spatk, iv.spdef, iv.spe);
+	save.view->body(buf, buf + sizeof buf, currentpk);
+	r.min.y += screenprint(r.min, buf);
 	flushimage(display, 1);
 }
 
@@ -134,13 +134,14 @@ click(Mouse *m)
 	p.y -= screen->r.min.y;
 	p.x -= screen->r.min.x;
 
+	/* FIXME */
 	p.y -= display->defaultfont->height*3;
 
 	p.x /= spwd.x;
 	p.y /= spwd.y;
 	if(p.x + (p.y*6) > 30)
 		return 0;
-	currentpk = gen3.pc.box +currentbox*30 + (p.x + (p.y*6));
+	currentpk = save.view->box(currentbox, (p.x + (p.y*6)), &save.gen3);
 	return 1;
 }
 
@@ -154,7 +155,7 @@ enum{
 void
 usage(void)
 {
-	fprint(2, "usage: %s game.sav\n", argv0);
+	fprint(2, "usage: %s [-3c] file\n", argv0);
 	threadexitsall("usage");
 }
 
@@ -175,19 +176,35 @@ threadmain(int argc, char **argv)
 		{nil, nil, CHANEND},
 	};
 
+	save.type = GNONE;
 	ARGBEGIN{
+	case '3':
+		save.view = &vgen3;
+		save.type = GG3;
+		break;
+	case 'c':
+		save.view = &vcolo;
+		save.type = GCOLO;
+		break;
 	default:
 		usage();
 	}ARGEND;
-	if(argc < 1)
+	if(argc < 1 || save.type == GNONE)
 		usage();
 
 	fd = open(argv[0], OREAD);
 	if(fd < 0)
 		sysfatal("open: %r");
 
-	fmtinstall('G', gen3strfmt);
-	getgen3(fd, &gen3);
+	save.view->init();
+	switch(save.type){
+	case GG3:
+		getgen3(fd, &save.gen3);
+		break;
+	case GCOLO:
+		getcolo(fd, &save.colo);
+		break;
+	}
 
 	if(initdraw(nil, nil, "pse") < 0)
 		sysfatal("initdraw: %r");

@@ -6,18 +6,23 @@ TARG=\
 	view\
 
 HFILES=\
-	gen3.h\
+	colodat.h\
 	gen3dat.h\
 
 OFILES=\
+	colo.$O\
 	gen3.$O\
 	gen3dat.$O\
+	colodat.$O\
 	dex.$O\
 
 </sys/src/cmd/mkmany
 
 gen3dat.c: gen3dat.h
 	dfc -l $prereq > $target
+
+colodat.c: colodat.h
+	dfc -b $prereq > $target
 
 pokesprite:
 	git/clone https://github.com/msikma/pokesprite.git

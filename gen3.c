@@ -1,12 +1,24 @@
 #include <u.h>
 #include <libc.h>
 #include "gen3dat.h"
-#include "gen3.h"
+#include "colodat.h"
+#include "pse.h"
 
-char *gen3gnametab[] = {
-	[GRS] "Ruby/Sapphire",
-	[GFRLG] "Fire Red/Leaf Green",
-	[GEM] "Emerald",
+enum{
+	STrainer,
+	SInvent,
+	SState,
+	SMisc,
+	SRiv,
+	SPCA,
+	SPCB,
+	SPCC,
+	SPCD,
+	SPCE,
+	SPCF,
+	SPCG,
+	SPCH,
+	SPCI,
 };
 
 int poketab[24][4] = {
@@ -96,11 +108,23 @@ gen3strfmt(Fmt *f)
 	long n;
 	uchar buf[32];
 
+	n = f->prec;
 	p = va_arg(f->args, uchar*);
-	n = va_arg(f->args, long);
 	gen3pkstr(buf, p, n);
 	return fmtprint(f, "%s", (char*)buf);
 }
+
+typedef struct Gen3iv Gen3iv;
+struct Gen3iv {
+	uchar hp;
+	uchar atk;
+	uchar def;
+	uchar spe;
+	uchar spatk;
+	uchar spdef;
+	uchar egg;
+	uchar ability;
+};
 
 void
 getgen3iv(Gen3iv *dst, u32int src)
@@ -189,10 +213,77 @@ getgen3(int fd, Gen3 *save)
 }
 
 extern int gen3speciestab[];
+extern char *dexfiletab[];
+extern char *movenametab[];
 
-int
-getgen3dex(u16int species)
+static int
+vdex3(void *v)
 {
+	Pokedat pd;
+	Pokemon *p;
 
-	return gen3speciestab[species]-1;
+	p = v;
+	if(p->otid == 0)
+		return -1;
+	decryptpokemon(&pd, v);
+	return gen3speciestab[pd.g.species]-1;
 }
+
+#pragma varargck type "L" uchar*
+
+static void
+vinit3(void)
+{
+	fmtinstall('L', gen3strfmt);
+}
+
+static int
+vhdr3(char *dst, char *e, void *v, int box)
+{
+	Gen3 *s;
+
+	s = v;
+	dst = seprint(dst, e, "Name: %.*L  ID: %d  Secret ID: %d\n", sizeof s->tr.name, s->tr.name, s->tr.id, s->tr.secretid);
+	dst = seprint(dst, e, "Game: %s  Time Played: %dhr %dmin\n", gnametab[s->type], s->tr.hours, s->tr.min);
+	seprint(dst, e, "Box %d: %.*L\n", box+1, sizeof s->pc.name[box].n, s->pc.name[box].n);
+	return 0;
+}
+
+static int
+vbody3(char *dst, char *e, void *v)
+{
+	Pokemon *p;
+	Pokedat pd;
+	Gen3iv iv;
+
+	p = v;
+	decryptpokemon(&pd, p);
+	dst = seprint(dst, e, "Name: %.*L\n", sizeof p->name, p->name);
+	dst = seprint(dst, e, "OT Name: %.*L  OT ID: %ud  OT Secret ID: %d\n", sizeof p->otname, p->otname, p->otid, p->otsecretid);
+	dst = seprint(dst, e, "National Dex: %d\n", gen3speciestab[pd.g.species]-1);
+	dst = seprint(dst, e, "Shiny: %d\n", gen3shiny(p));
+	dst = seprint(dst, e, "Exp: %d\n", pd.g.exp);
+	dst = seprint(dst, e, "Move 1: %s  Move 2: %s\n", movenametab[pd.a.move1], movenametab[pd.a.move2]);
+	dst = seprint(dst, e, "Move 3: %s  Move 4: %s\n", movenametab[pd.a.move3], movenametab[pd.a.move4]);
+	dst = seprint(dst, e, "[EV] HP: %d  Atk: %d  Def: %d  SpA: %d  SpD: %d  Spe: %d\n", pd.e.hp, pd.e.atk, pd.e.def, pd.e.spatk, pd.e.spdef, pd.e.spd);
+	getgen3iv(&iv, pd.m.iv);
+	seprint(dst, e, "[IV] HP: %d  Atk: %d  Def: %d  SpA: %d  SpD: %d  Spe: %d\n", iv.hp, iv.atk, iv.def, iv.spatk, iv.spdef, iv.spe);
+	return 0;
+}
+
+static void*
+vboxpk3(int box, int i, void *v)
+{
+	Gen3 *s;
+
+	s = v;
+	return s->pc.box + box*30 + i;
+}
+
+View vgen3 = {
+	vinit3,
+	vhdr3,
+	vdex3,
+	vbody3,
+	vboxpk3,
+};

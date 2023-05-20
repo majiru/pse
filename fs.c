@@ -4,7 +4,8 @@
 #include <thread.h>
 #include <9p.h>
 #include "gen3dat.h"
-#include "gen3.h"
+#include "colodat.h"
+#include "pse.h"
 
 Gen3 gen3;
 

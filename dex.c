@@ -1,5 +1,15 @@
 #include <u.h>
 #include <libc.h>
+#include "colodat.h"
+#include "gen3dat.h"
+#include "pse.h"
+
+char *gnametab[] = {
+	[GRS] "Ruby/Sapphire",
+	[GFRLG] "Fire Red/Leaf Green",
+	[GEM] "Emerald",
+	[GCOLO] "Colosseum",
+};
 
 char *dexfiletab[] = {
 	[0] "bulbasaur",
