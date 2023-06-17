@@ -1,0 +1,9 @@
+Pokemon save editor. Currently supporting gen 3 and colosseum.
+
+Install:
+	; mk installsprite
+	; mk install
+
+Usage:
+	; pse/view -c colosseum.gci
+	; pse/view -3 ruby.sav
